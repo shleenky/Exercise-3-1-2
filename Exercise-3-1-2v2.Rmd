@@ -1,0 +1,118 @@
+---
+title: "Exercise 3.1.2"
+author: "Christine Schlenker"
+date: "April 20, 2016"
+output: html_document
+---
+<!-- INCOMPLETE - trying to replace NA in boat column with dummy, currently failing-->
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+##Data Wrangling Exercise 2: Dealing with missing values  
+
+In this exercise, you'll work with one of the most popular starter data sets in data science, the Titanic data set. This is a data set that records various attributes of passengers on the Titanic, including who survived and who didn’t.  
+
+###Getting started
+* Read the description of the data set on the [Kaggle website](https://www.kaggle.com/c/titanic/data).
+* Download the data as an [excel file here](http://biostat.mc.vanderbilt.edu/wiki/pub/Main/DataSets/titanic3.xls).
+
+###Exercise
+
+Using R, you’ll be handling missing values in this data set, and creating a new data set. Specifically, these are the tasks you need to do:  
+
+(@) **Load the data in RStudio**  
+Save the data set as a CSV file called *titanic_original.csv* and load it in RStudio into a data frame.  
+```{r load_packages}
+# packages needed: dplyr, tidyr. Install packages prior to starting.
+library(dplyr)
+library(tidyr)
+```
+
+```{r load_data}
+# read data and store in data frame
+# na.strings sets blanks and NA to NA, allows fully blank row to be removed below
+titanic_original <- as.data.frame(read.csv("titanic_original.csv", na.strings = c("", NA)))
+# summary to get a fast overview of the data frame
+summary(titanic_original)
+# to keep original data set intact
+titanic_clean <- titanic_original
+# note, one row is all NA - removing that row
+# method based on recommendation from Google+ group
+titanic_clean <- titanic_clean[apply(titanic_clean,1,function(x)any(!is.na(x))),]
+
+```
+
+
+(@) **Port of embarkation**  
+The *embarked* column has one missing value, which is known to correspond to a passenger who actually embarked at Southampton. Find the missing value and replace it with *S*.
+
+```{r fill_embarked}
+# idea: http://stackoverflow.com/questions/28013850/change-value-of-variable-with-dplyr
+# note: embarked==NA did not work. must use is.na().
+titanic_clean <- titanic_clean %>%
+     mutate(embarked = replace(embarked, is.na(embarked), "S")) %>% 
+     as.data.frame()
+
+```
+
+
+(@) **Age**  
+You’ll notice that a lot of the values in the *Age* column are missing. While there are many ways to fill these missing values, using the mean or median of the rest of the values is quite common in such cases.
+    i. Calculate the mean of the *Age* column and use that value to populate the missing values
+    ii. Think about other ways you could have populated the missing values in the age column. Why would you pick any of those over the mean (or not)?
+      A. A number of subsetting options may improve the replacement of missing age values
+        i. The honorific "Master" was only used for boys under 16. Compute average age of those with "Master" in *name* column and "male" in *sex* column (in case someone's name was Master), and use to replace NAs for those with "Master" in *age* column.
+        ii. Do the same for men without "Master" in the name column - these are all adult men over 16.
+
+```{r replace_missing_age}
+# idea: http://stackoverflow.com/questions/21714867/replace-na-in-a-dplyr-chain
+titanic_clean <- titanic_clean %>%
+     mutate(age = replace(age, is.na(age), median(age, na.rm = TRUE))) %>% 
+     as.data.frame()
+```
+    
+
+(@) **Lifeboat**  
+You’re interested in looking at the distribution of passengers in different lifeboats, but as we know, many passengers did not make it to a boat :-( This means that there are a lot of missing values in the *boat* column. Fill these empty slots with a dummy value e.g. *NA*
+```{r fill_lifeboat}
+#not working
+#titanic_clean <- titanic_clean %>%
+#    mutate(boat = replace(boat, is.na(boat), "Dummy")) %>%
+#    as.data.frame()
+
+#tidyr method. Why isn't this working?
+#titanic_clean %>% 
+#  replace_na(list(boat = "dummy"))
+
+# still has the NAs.
+#Warning message: - for both methods
+#In `[<-.factor`(`*tmp*`, is.na(data[[var]]), value = c(12L, 3L,  :
+#  invalid factor level, NA generated
+# tried stringsAsFactors = false, no change.
+  
+```
+
+
+(@) **Cabin**  
+You notice that many passengers don’t have a cabin number associated with them.  
+* Does it make sense to fill missing cabin numbers with a value?  
+    + While it doesn't make sense to fill in the missing numbers, it may make sense to use it as a proxy.  
+    + Visual inspection of the data shows that there is probably a strong correlation between missing cabin number and passenger class: very few pclass==3 have cabin numbers, and most pclass==1 have cabin numbers. Research shows the reason: most of the cabin information was retrieved from a list of first class passengers found on the body of a steward.  
+* What does a missing value here mean?  
+    + A missing value occurs in this variable when the information was not recorded or when the records were lost. In this case, it is probably that the records were lost in the sinking.   
+You have a hunch that the fact that the cabin number is missing might be a useful indicator of survival. Create a new column *has_cabin_number* which has *1* if there is a cabin number, and *0* otherwise.
+
+```{r cabin_dummy}
+# using dplyr::mutate to create new variable and ifelse to selectively fill with 1 or 0
+titanic_clean <- mutate(titanic_clean, has_cabin_number = ifelse(!is.na(titanic_clean$cabin), 1, 0))
+```
+
+(@) **Submit the project on Github**  
+Include your code, the original data as a CSV file titanic_original.csv, and the cleaned up data as a CSV file called titanic_clean.csv.
+
+```{r export_file}
+write.csv(titanic_clean, "titanic_clean.csv")
+# commit and push to github using instructions from: http://www.r-bloggers.com/rstudio-and-github/
+```
+
