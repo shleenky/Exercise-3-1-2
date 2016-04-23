@@ -4,7 +4,6 @@ author: "Christine Schlenker"
 date: "April 20, 2016"
 output: html_document
 ---
-<!-- INCOMPLETE - trying to replace NA in boat column with dummy, currently failing-->
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
@@ -32,7 +31,8 @@ library(tidyr)
 ```{r load_data}
 # read data and store in data frame
 # na.strings sets blanks and NA to NA, allows fully blank row to be removed below
-titanic_original <- as.data.frame(read.csv("titanic_original.csv", na.strings = c("", NA)))
+# stringsAsFactors in import to be able to use replace_na later
+titanic_original <- as.data.frame(read.csv("titanic_original.csv", stringsAsFactors = FALSE,  na.strings = c("", NA)))
 # summary to get a fast overview of the data frame
 summary(titanic_original)
 # to keep original data set intact
@@ -58,39 +58,27 @@ titanic_clean <- titanic_clean %>%
 
 
 (@) **Age**  
-You’ll notice that a lot of the values in the *Age* column are missing. While there are many ways to fill these missing values, using the mean or median of the rest of the values is quite common in such cases.
-    i. Calculate the mean of the *Age* column and use that value to populate the missing values
+You’ll notice that a lot of the values in the *age* column are missing. While there are many ways to fill these missing values, using the mean or median of the rest of the values is quite common in such cases.
+    i. Calculate the mean of the *age* column and use that value to populate the missing values
     ii. Think about other ways you could have populated the missing values in the age column. Why would you pick any of those over the mean (or not)?
-      A. A number of subsetting options may improve the replacement of missing age values
-        i. The honorific "Master" was only used for boys under 16. Compute average age of those with "Master" in *name* column and "male" in *sex* column (in case someone's name was Master), and use to replace NAs for those with "Master" in *age* column.
-        ii. Do the same for men without "Master" in the name column - these are all adult men over 16.
+      A. It is possible to impute the missing values by subsetting on other variables, which may improve the replacement of missing age values. A possible method follows. The honorific "Master" was only used for boys under 16. Compute average age of those with "Master" in *name* column and "male" in *sex* column (in case someone's name was Master), and use to replace NAs for those with "Master" in *age* column. Do the same for men without "Master" in the name column - these are all adult men over 16. This should result in a more accurate imputation for these groups.
 
 ```{r replace_missing_age}
 # idea: http://stackoverflow.com/questions/21714867/replace-na-in-a-dplyr-chain
 titanic_clean <- titanic_clean %>%
-     mutate(age = replace(age, is.na(age), median(age, na.rm = TRUE))) %>% 
+     mutate(age = replace(age, is.na(age), mean(age, na.rm = TRUE))) %>% 
      as.data.frame()
 ```
     
 
 (@) **Lifeboat**  
 You’re interested in looking at the distribution of passengers in different lifeboats, but as we know, many passengers did not make it to a boat :-( This means that there are a lot of missing values in the *boat* column. Fill these empty slots with a dummy value e.g. *NA*
-```{r fill_lifeboat}
-#not working
-#titanic_clean <- titanic_clean %>%
-#    mutate(boat = replace(boat, is.na(boat), "Dummy")) %>%
-#    as.data.frame()
 
-#tidyr method. Why isn't this working?
-#titanic_clean %>% 
-#  replace_na(list(boat = "dummy"))
-
-# still has the NAs.
-#Warning message: - for both methods
-#In `[<-.factor`(`*tmp*`, is.na(data[[var]]), value = c(12L, 3L,  :
-#  invalid factor level, NA generated
-# tried stringsAsFactors = false, no change.
-  
+```{r dummy_lifeboat}
+# needed to import csv with stringsAsFactors, else, got errors here
+# tips from: http://stackoverflow.com/questions/15341211/replace-nas-in-r-works-in-a-practice-dataset-but-warning-message-when-applied
+titanic_clean <- titanic_clean %>%
+  replace_na(list(boat = "NA"))
 ```
 
 
